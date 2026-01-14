@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Map with Geo Data Viewer</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* Page typography */
+    body { font-family: Arial, Helvetica, sans-serif; padding: 20px; margin: 0; }
+
+    /* Subtle gray textured background (CSS-based approximation) */
+    body {
+      background-color: #e9e9ec;
+      background-image:
+        linear-gradient(0deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px),
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.02), transparent 25%),
+        radial-gradient(circle at 80% 80%, rgba(0,0,0,0.015), transparent 25%);
+      background-size: 6px 6px, 6px 6px, 300px 300px, 400px 400px;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* Map container styling */
+    #map { height: 500px; width: 80%; border: 1px solid #ccc; margin: 0 auto 12px auto; background: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    button { padding: 8px 12px; font-size: 16px; }
+    .subtitle { font-size: 0.9rem; color: #555; margin-top: -6px; margin-bottom: 10px; }
+  </style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <h1>RC Firemarker V.1</h1>
+  <p class="subtitle">GTAM (Ground to Air Marker) map below</p>
+  <p>Click the button to open this location in OpenStreetMap (opens in a new tab).</p>
+  <div id="map"></div>
+  <button id="open">Open in OpenStreetMap</button>
+
+  <script>
+    // Change these coordinates to your desired location
+    // Coordinates: 34°10'31.0"N 118°28'54.0"W -> decimal approx 34.175278, -118.481667
+    const lat = 34.175278; // 34°10'31.0"N
+    const lng = -118.481667; // 118°28'54.0"W
+
+    // Insert Leaflet map
+    const map = L.map('map').setView([lat, lng], 14);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    const initialMarker = L.marker([lat, lng]).addTo(map);
+    initialMarker.on('contextmenu', function() { map.removeLayer(initialMarker); });
+
+    // Add click event to place markers
+    map.on('click', function(e) {
+      const marker = L.marker(e.latlng).addTo(map).bindPopup('Marker at ' + e.latlng.toString()).openPopup();
+      marker.on('contextmenu', function() { map.removeLayer(marker); });
+    });
+
+    // Load and display airports
+    fetch('usa-airports.map.json')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          pointToLayer: function(feature, latlng) {
+            return L.circleMarker(latlng, {
+              color: 'blue',
+              fillColor: '#30f',
+              fillOpacity: 0.5,
+              radius: 5
+            });
+          },
+          onEachFeature: function(feature, layer) {
+            layer.bindPopup(`<b>${feature.properties.name}</b><br>${feature.properties.city}<br>IATA: ${feature.properties.iata}`);
+          }
+        }).addTo(map);
+      })
+      .catch(error => console.error('Error loading airports:', error));
+
+    // Button opens OpenStreetMap in a new tab
+    document.getElementById('open').addEventListener('click', () => {
+      const url = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=14/${lat}/${lng}`;
+      window.open(url, '_blank');
+    });
+  </script>
+</body>
+</html>
